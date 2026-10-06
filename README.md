@@ -1,136 +1,538 @@
-# LeadPilot
+# LeadPilot 🚀
 
-**An AI-powered CRM for small sales teams** — built as a backend engineering portfolio project combining standard CRM workflows (leads, contacts, pipeline tracking) with an LLM-backed lead analysis assistant.
+LeadPilot is an AI-powered B2B Customer Relationship Management (CRM) platform built to help sales teams manage companies, contacts, leads, activities, and follow-ups from a single system.
 
----
-
-## What LeadPilot Does
-
-LeadPilot helps a small sales team track companies, contacts, and leads through a pipeline, log activity history, manage follow-ups, and get AI-generated guidance on what to do next with a given lead.
-
-- **Authenticated** — JWT-based login (BCrypt password hashing)
-- **Full CRM data model** — Companies, Contacts, Leads, Activities, and Follow-ups, all linked and queryable
-- **Pipeline tracking** — leads move through stages (`NEW → CONTACTED → INTERESTED → PROPOSAL → WON/LOST`), with automatic `NEW → CONTACTED` transition on first logged activity
-- **Follow-up management** — scheduled follow-ups with a background job that automatically marks overdue ones
-- **Dashboard analytics** — pipeline and follow-up status at a glance
-- **AI lead analysis** — an LLM reads a lead's full activity and follow-up history and returns structured next-best-action guidance
+The project combines a traditional CRM backend with an AI-powered Lead Assistant that analyzes CRM context and provides lead summaries, concerns/interests, next-best-action recommendations, and personalized follow-up drafts.
 
 ---
 
-## Core Features
+## ✨ Features
 
-### Authentication
-- JWT-based login and registration, BCrypt password hashing
-- Stateless Spring Security filter chain
+### 🔐 Authentication & Security
 
-### CRM Core
-- Company → Contact → Lead hierarchy, with lead source tracking (`WEBSITE`, `REFERRAL`, `COLD_CALL`, `EMAIL`, `LINKEDIN`, `OTHER`)
-- Activity logging per lead (`CALL`, `MEETING`, `NOTE`) — the first logged activity automatically advances a lead from `NEW` to `CONTACTED`
-- Lead stage pipeline with full CRUD and ownership-aware access
-
-### Follow-ups
-- Scheduled follow-ups per lead with due dates
-- A background scheduler (`@Scheduled`, runs every 60s) automatically flips `PENDING` follow-ups to `OVERDUE` once their due date passes — no manual polling needed
-
-### Dashboard
-- Aggregated view of pipeline distribution and follow-up status for the logged-in user
-
-### AI Lead Analysis
-- `ChatClient` (Spring AI) reads a lead's full context — profile, activity history, open follow-ups — and returns a structured response: interests/concerns, stage-aware next-best-action, and a drafted follow-up message
-- Backed by a Groq-hosted open-weight model (`gpt-oss-120b`) via the OpenAI-compatible Spring AI starter, so swapping providers later only needs a config change
+- JWT-based authentication
+- Spring Security integration
+- BCrypt password hashing
+- Stateless authentication
+- Protected REST APIs
+- Secure user management
+- Lead assignment and reassignment between sales team members
 
 ---
 
-## Tech Stack
+### 🏢 Company Management
+
+Manage prospect/customer organizations with:
+
+- Company name
+- Industry
+- Website
+- Phone
+- Email
+- Address
+
+A company can have multiple contacts and leads.
+
+---
+
+### 👤 Contact Management
+
+Manage individual contacts associated with companies.
+
+Each contact can contain:
+
+- Name
+- Email
+- Phone
+- Designation
+- Associated company
+
+A contact can be associated with multiple leads.
+
+---
+
+### 🎯 Lead Management
+
+LeadPilot provides complete lead lifecycle management.
+
+Each lead contains:
+
+- Lead name
+- Company
+- Contact
+- Assigned salesperson
+- Lead source
+- Current stage
+- Estimated deal value
+- Notes
+
+Supported lead stages:
+
+```text
+NEW
+CONTACTED
+INTERESTED
+PROPOSAL
+WON
+LOST
+```
+
+Supported lead sources include:
+
+```text
+WEBSITE
+REFERRAL
+COLD_CALL
+EMAIL
+LINKEDIN
+OTHER
+```
+
+Sales team members can also reassign leads between users.
+
+---
+
+### 📝 Activity Tracking
+
+Activities are used to maintain the historical CRM timeline of a lead.
+
+Supported activity types include:
+
+- Calls
+- Meetings
+- Notes
+
+Lead activity history can be retrieved and analyzed by the AI assistant.
+
+LeadPilot also includes an automatic lifecycle rule:
+
+```text
+NEW → CONTACTED
+```
+
+The first activity on a new lead automatically moves the lead from `NEW` to `CONTACTED`.
+
+---
+
+### 📅 Follow-up Management
+
+Salespeople can create future follow-up tasks for leads.
+
+Each follow-up contains:
+
+- Title
+- Description
+- Due date
+- Status
+- Associated lead
+
+Follow-up statuses:
+
+```text
+PENDING
+OVERDUE
+COMPLETED
+```
+
+A scheduled backend job automatically checks pending follow-ups and marks them as `OVERDUE` once their due date has passed (runs every 60 seconds).
+
+---
+
+### 📊 Dashboard & Pipeline Analytics
+
+LeadPilot provides CRM dashboard analytics including:
+
+- Total leads
+- Lead count by stage
+- Total pipeline value
+- Won pipeline value
+- Lost pipeline value
+- Pending follow-ups
+- Overdue follow-ups
+- Completed follow-ups
+
+This gives sales teams a quick overview of their current pipeline and follow-up workload.
+
+---
+
+## 🤖 AI Lead Assistant
+
+The main differentiating feature of LeadPilot is its AI-powered Lead Assistant.
+
+Instead of using an LLM as a generic chatbot, the AI receives actual CRM context for a specific lead.
+
+The assistant considers:
+
+- Lead profile
+- Company information
+- Contact information
+- Current lead stage
+- Lead source
+- Estimated deal value
+- CRM notes
+- Historical activities
+- Existing follow-ups
+
+The AI then generates a structured analysis containing:
+
+### 1. Lead Summary
+A concise summary of the current sales situation.
+
+### 2. Interests & Concerns
+Identifies relevant interests, objections, or concerns based on available CRM data.
+
+### 3. Next Best Action
+Suggests the most appropriate next action based on the lead's current stage and historical context. The recommendations are stage-aware:
+
+```text
+NEW         → Initial outreach
+CONTACTED   → Qualification / continued conversation
+INTERESTED  → Address concerns / move toward proposal
+PROPOSAL    → Proposal follow-up / objection handling
+WON         → Onboarding / implementation
+LOST        → Understand loss / possible future re-engagement
+```
+
+### 4. Personalized Follow-up Draft
+Generates a follow-up message personalized using the available CRM context.
+
+---
+
+## 🧠 AI Architecture
+
+```text
+React Frontend
+       ↓
+Spring Boot REST API
+       ↓
+Lead + Company + Contact
+       ↓
+Activities + Follow-ups
+       ↓
+Structured Prompt
+       ↓
+Spring AI (ChatClient)
+       ↓
+Groq API
+       ↓
+LLM (gpt-oss-120b)
+       ↓
+Structured AI Response
+       ↓
+React Frontend
+```
+
+Lead analysis endpoint:
+
+```text
+GET /api/ai/leads/{leadId}
+```
+
+Example response:
+
+```json
+{
+  "summary": "Enterprise Plan opportunity with XYZ Technologies...",
+  "interestsAndConcerns": "The prospect is interested in an enterprise solution but has pricing concerns.",
+  "nextBestAction": "Schedule an implementation kickoff meeting.",
+  "followUpDraft": "Hi Rahul,..."
+}
+```
+
+---
+
+## 🏗️ System Architecture
+
+```text
+                    ┌──────────────────────┐
+                    │    React Frontend    │
+                    │      + Vite          │
+                    └──────────┬───────────┘
+                               │ REST API
+                               ▼
+                    ┌──────────────────────┐
+                    │    Spring Boot       │
+                    │      Backend         │
+                    └──────────┬───────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              ▼                ▼                ▼
+       Spring Security     Service Layer      Spring AI
+            + JWT               │                │
+                                │                ▼
+                                │          ┌───────────┐
+                                │          │   Groq    │
+                                │          │    LLM    │
+                                │          └───────────┘
+                                │
+                                ▼
+                    ┌──────────────────────┐
+                    │ PostgreSQL /         │
+                    │ Supabase             │
+                    └──────────────────────┘
+```
+
+---
+
+## 🗂️ Domain Model
+
+```text
+User
+ │
+ │ assigns
+ ▼
+Lead
+ │
+ ├──────────────► Company
+ │
+ ├──────────────► Contact
+ │
+ ├──────────────► Activities
+ │
+ └──────────────► FollowUps
+```
+
+- **User** — a salesperson using the CRM
+- **Company** — the prospect/customer organization; can have multiple contacts and leads
+- **Contact** — an individual person inside a company; can have multiple leads
+- **Lead** — a sales opportunity; belongs to one company, one contact, and one assigned salesperson
+- **Activity** — a historical CRM interaction (call, meeting, note)
+- **FollowUp** — a future sales task/reminder
+
+---
+
+## 🛠️ Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Language / Framework | Java 21, Spring Boot |
+| Language / Framework | Java 21, Spring Boot 4.1 |
+| Security | Spring Security, JWT (JJWT), BCrypt |
+| Persistence | Spring Data JPA, Hibernate |
 | Database | PostgreSQL (Supabase) |
-| Auth | JWT (JJWT), BCrypt |
-| AI | Spring AI (ChatClient), Groq (`gpt-oss-120b`, OpenAI-compatible API) |
-| Frontend | React 19 (Vite) |
-| Scheduling | Spring `@Scheduled` |
-| Tools | Maven, Lombok |
+| AI | Spring AI (ChatClient), Groq API (`gpt-oss-120b`) |
+| Frontend | React, Vite, JavaScript, CSS |
+| Build / Tools | Maven, Git, GitHub, Postman |
 
 ---
 
-## Architecture
+## 📁 Project Structure
 
-```
-                     ┌──────────────┐
-  Client Request ──▶ │ JWT Filter   │
-                     └──────┬───────┘
-                            │
-              ┌─────────────┼───────────────┐
-              ▼              ▼               ▼
-      ┌───────────┐  ┌───────────────┐  ┌──────────────┐
-      │ Lead /    │  │ Activity →    │  │ AI Analysis  │──▶ Groq (gpt-oss-120b)
-      │ Contact / │  │ auto-advances │  │ (ChatClient) │     via Spring AI
-      │ Company   │  │ NEW→CONTACTED │  └──────────────┘
-      │ CRUD      │  └───────────────┘
-      └───────────┘
-              │
-              ▼
-      ┌───────────────┐
-      │ FollowUp       │◀── @Scheduled job flips
-      │ (PENDING/      │    PENDING → OVERDUE
-      │  OVERDUE/      │    every 60s
-      │  COMPLETED)    │
-      └───────────────┘
-                            (PostgreSQL / Supabase)
+```text
+leadpilot/
+└── src/
+    └── main/
+        └── java/com/leadpilot/
+            ├── config/
+            ├── controller/
+            ├── dto/
+            │   ├── request/
+            │   └── response/
+            ├── entity/
+            ├── exception/
+            ├── repository/
+            ├── security/
+            └── service/
+└── leadpilot-frontend/
+    └── src/
 ```
 
----
-
-## API Overview
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Register a new user |
-| POST | `/api/auth/login` | Log in, receive a JWT |
-| GET/POST | `/api/companies` | List / create companies |
-| GET/POST | `/api/contacts` | List / create contacts |
-| GET/POST | `/api/leads` | List / create leads |
-| PATCH | `/api/leads/{id}` | Update a lead (stage, details) |
-| POST | `/api/leads/{id}/activities` | Log an activity against a lead |
-| POST | `/api/leads/{id}/followups` | Schedule a follow-up |
-| GET | `/api/leads/{id}/ai-analysis` | AI-generated next-best-action for a lead |
-| GET | `/api/dashboard` | Pipeline and follow-up summary |
-
-(Exact paths may vary slightly — see the controllers for the authoritative list.)
+Layered architecture: `Controller → Service → Repository → PostgreSQL`, with DTOs separating API request/response models from persistence entities.
 
 ---
 
-## Getting Started (Local)
+## 🔒 Security Architecture
+
+```text
+User Login
+    ↓
+Credentials Validation
+    ↓
+JWT Generation
+    ↓
+Client Stores Token
+    ↓
+JWT sent with API requests
+    ↓
+JwtAuthenticationFilter
+    ↓
+Authenticated Request
+```
+
+Passwords are never stored in plaintext — hashed using BCrypt.
+
+---
+
+## 🔌 API Overview
+
+### Auth & Users
+```text
+POST /api/users          — register a new user
+GET  /api/users          — list users
+POST /api/auth/login     — log in, receive a JWT
+GET  /api/auth/me        — current authenticated user
+```
+
+### Companies
+```text
+POST   /api/companies
+GET    /api/companies
+GET    /api/companies/{id}
+PUT    /api/companies/{id}
+DELETE /api/companies/{id}
+```
+
+### Contacts
+```text
+POST   /api/contacts
+GET    /api/contacts
+GET    /api/contacts/{id}
+GET    /api/contacts/company/{companyId}
+PUT    /api/contacts/{id}
+DELETE /api/contacts/{id}
+```
+
+### Leads
+```text
+POST   /api/leads
+GET    /api/leads
+GET    /api/leads/{id}
+GET    /api/leads/company/{companyId}
+GET    /api/leads/contact/{contactId}
+PUT    /api/leads/{id}
+DELETE /api/leads/{id}
+```
+
+### Activities
+```text
+POST   /api/activities
+GET    /api/activities
+GET    /api/activities/{id}
+GET    /api/activities/lead/{leadId}
+PUT    /api/activities/{id}
+DELETE /api/activities/{id}
+```
+
+### Follow-ups
+```text
+POST   /api/follow-ups
+GET    /api/follow-ups
+GET    /api/follow-ups/{id}
+GET    /api/follow-ups/lead/{leadId}
+PUT    /api/follow-ups/{id}
+DELETE /api/follow-ups/{id}
+```
+
+### Dashboard & AI
+```text
+GET /api/dashboard
+GET /api/ai/leads/{leadId}
+GET /api/ai/test?prompt=...
+```
+
+---
+
+## ⚙️ Local Setup
 
 ### Prerequisites
 - Java 21
-- A PostgreSQL database (e.g. a free [Supabase](https://supabase.com) project)
-- A Groq API key ([console.groq.com](https://console.groq.com)) — or any OpenAI-compatible endpoint
+- Maven
+- Node.js
+- PostgreSQL / Supabase database
+- Groq API key
 
-### Backend
-Set the required environment variables (do **not** hardcode these in `application.properties` or in IDE run configurations that get committed):
+### Backend Setup
+```bash
+git clone https://github.com/aroravivek398/leadpilot.git
+cd leadpilot
+```
+
+Set environment variables (do **not** hardcode these in `application.properties` or in IDE run configurations that get committed):
 ```bash
 export SUPABASE_DB_URL="jdbc:postgresql://<host>:5432/postgres?user=<user>&password=<password>"
 export GROQ_API_KEY="your-groq-api-key"
+export JWT_SECRET="your-long-random-secret"
 ```
-Then:
+
+Run the backend:
 ```bash
 ./mvnw spring-boot:run
 ```
-The API runs on `http://localhost:8080` by default.
+The backend runs on `http://localhost:8080`.
 
-### Frontend
+### Frontend Setup
 ```bash
 cd leadpilot-frontend
 npm install
 npm run dev
 ```
-Set `VITE_API_URL` in a `.env` file to point at the backend (defaults to `http://localhost:8080`).
+The frontend runs on `http://localhost:5173`.
 
 ---
 
-## Status
+## 🔮 Future Improvements
 
-Actively in development — core CRM flows, auth, follow-up scheduling, and AI lead analysis are implemented; deployment and additional test coverage are in progress.
+The next major feature planned for LeadPilot is **RAG-based historical lead intelligence**:
+
+```text
+Current Lead
+     ↓
+Generate Embedding
+     ↓
+pgvector Similarity Search
+     ↓
+Retrieve Similar Historical Leads + Their Activities/Outcomes
+     ↓
+Combine With Current Lead Context
+     ↓
+LLM
+     ↓
+Better Next-Best-Action Recommendation
+```
+
+Other planned improvements:
+- pgvector-based semantic search over historical CRM data
+- RAG-powered recommendations
+- AI Assistant UI in the React dashboard
+- Production deployment
+- Improved authorization and role management
+- Automated testing
+- Monitoring and observability
+
+---
+
+## 🎯 Project Goals
+
+LeadPilot is being developed with a focus on demonstrating practical backend engineering and applied AI rather than building a simple LLM wrapper — REST API design, authentication/authorization, relational data modeling, scheduled background processing, CRM domain modeling, structured LLM output, and (soon) retrieval-augmented generation.
+
+---
+
+## 📌 Current Status
+
+```text
+Core CRM                    ✅
+Authentication              ✅
+Company Management          ✅
+Contact Management          ✅
+Lead Management             ✅
+Lead Assignment              ✅
+Activity Tracking           ✅
+Follow-up Management        ✅
+Overdue Detection            ✅
+Dashboard Analytics          ✅
+AI Lead Assistant            ✅
+Stage-aware AI               ✅
+Personalized AI Follow-up    ✅
+pgvector RAG                 🚧
+AI Frontend                  🚧
+Deployment                   🚧
+```
+
+---
+
+## 👨‍💻 Author
+
+**Vivek R Kumar**
+B.Tech Computer Science & Engineering, Indian Institute of Information Technology, Kalyani
+
+- GitHub: https://github.com/aroravivek398
+- LinkedIn: https://www.linkedin.com/in/vivek-r-kumar-870893327/
