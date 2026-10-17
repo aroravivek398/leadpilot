@@ -65,4 +65,11 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error",
                         "This record is linked to other data (contacts or leads) or already exists."));
     }
+
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<Map<String, String>> handleAiFailure(AiServiceException ex) {
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", "AI analysis is temporarily unavailable. Please try again in a moment."));
+    }
 }

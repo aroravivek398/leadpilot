@@ -4,6 +4,7 @@ import com.leadpilot.dto.response.AiLeadAnalysisResponse;
 import com.leadpilot.entity.Activity;
 import com.leadpilot.entity.FollowUp;
 import com.leadpilot.entity.Lead;
+import com.leadpilot.exception.AiServiceException;
 import com.leadpilot.exception.ResourceNotFoundException;
 import com.leadpilot.repository.ActivityRepository;
 import com.leadpilot.repository.FollowUpRepository;
@@ -41,14 +42,19 @@ public class AiLeadAnalysisService {
 
         String prompt = buildPrompt(lead, activities, followUps);
 
-        return chatClient
-                .prompt()
-                .user(prompt)
-                .call()
-                .entity(
-                        AiLeadAnalysisResponse.class,
-                        spec -> spec.validateSchema()
-                );
+
+        try {
+            return chatClient
+                    .prompt()
+                    .user(prompt)
+                    .call()
+                    .entity(
+                            AiLeadAnalysisResponse.class,
+                            spec -> spec.validateSchema()
+                    );
+        } catch (Exception e) {
+            throw new AiServiceException("AI analysis failed", e);
+        }
     }
 
     private String buildPrompt(
