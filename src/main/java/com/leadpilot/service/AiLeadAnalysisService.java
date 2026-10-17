@@ -75,9 +75,8 @@ public class AiLeadAnalysisService {
         prompt.append("\nContact email: ").append(lead.getContact().getEmail());
         prompt.append("\nStage: ").append(lead.getStage());
         prompt.append("\nSource: ").append(lead.getSource());
-        prompt.append("\nEstimated value: ").append(lead.getEstimatedValue());
-        prompt.append("\nNotes: ").append(lead.getNotes());
-
+        prompt.append("\nEstimated value: INR ").append(lead.getEstimatedValue());        prompt.append("\nNotes: ").append(lead.getNotes());
+        prompt.append("\nAll monetary amounts are in Indian Rupees (INR). Never use the dollar sign.");
         prompt.append("\n\nHistorical activities:");
 
         if (activities.isEmpty()) {
