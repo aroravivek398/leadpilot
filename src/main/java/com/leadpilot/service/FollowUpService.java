@@ -4,7 +4,6 @@ import com.leadpilot.dto.request.CreateFollowUpRequest;
 import com.leadpilot.dto.request.UpdateFollowUpRequest;
 import com.leadpilot.dto.response.FollowUpResponse;
 import com.leadpilot.entity.FollowUp;
-import com.leadpilot.entity.FollowUpStatus;
 import com.leadpilot.entity.Lead;
 import com.leadpilot.exception.ResourceNotFoundException;
 import com.leadpilot.repository.FollowUpRepository;
@@ -12,6 +11,8 @@ import com.leadpilot.repository.LeadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.leadpilot.event.LeadChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 
@@ -22,15 +23,13 @@ public class FollowUpService {
 
     private final FollowUpRepository followUpRepository;
     private final LeadRepository leadRepository;
+    private final LeadAccessService leadAccessService;
+    private final CurrentUserService currentUserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public FollowUpResponse createFollowUp(CreateFollowUpRequest request) {
 
-        Lead lead = leadRepository.findById(request.getLeadId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Lead not found with id: " + request.getLeadId()
-                        )
-                );
+        Lead lead = leadAccessService.getOwnedLead(request.getLeadId());
 
         FollowUp followUp = new FollowUp();
         followUp.setTitle(request.getTitle());
@@ -39,6 +38,7 @@ public class FollowUpService {
         followUp.setLead(lead);
 
         FollowUp savedFollowUp = followUpRepository.save(followUp);
+        eventPublisher.publishEvent(new LeadChangedEvent(lead.getId()));
 
         return toResponse(savedFollowUp);
     }
@@ -46,21 +46,18 @@ public class FollowUpService {
     @Transactional(readOnly = true)
     public FollowUpResponse getFollowUp(Long id) {
 
-        FollowUp followUp = followUpRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "FollowUp not found with id: " + id
-                        )
-                );
+        FollowUp followUp = getOwnedFollowUp(id);
 
         return toResponse(followUp);
     }
 
     @Transactional(readOnly = true)
     public List<FollowUpResponse> getAllFollowUps() {
+        Long userId = currentUserService.getCurrentUser().getId();
 
         return followUpRepository.findAll()
                 .stream()
+                .filter(f -> f.getLead().getAssignedUser().getId().equals(userId))
                 .map(this::toResponse)
                 .toList();
     }
@@ -68,11 +65,7 @@ public class FollowUpService {
     @Transactional(readOnly = true)
     public List<FollowUpResponse> getFollowUpsByLead(Long leadId) {
 
-        if (!leadRepository.existsById(leadId)) {
-            throw new ResourceNotFoundException(
-                    "Lead not found with id: " + leadId
-            );
-        }
+        leadAccessService.getOwnedLead(leadId);
 
         return followUpRepository.findByLeadIdOrderByDueDateAsc(leadId)
                 .stream()
@@ -85,12 +78,7 @@ public class FollowUpService {
             UpdateFollowUpRequest request
     ) {
 
-        FollowUp followUp = followUpRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "FollowUp not found with id: " + id
-                        )
-                );
+        FollowUp followUp = getOwnedFollowUp(id);
 
         if (request.getTitle() != null) {
             followUp.setTitle(request.getTitle());
@@ -108,19 +96,17 @@ public class FollowUpService {
             followUp.setStatus(request.getStatus());
         }
 
+        eventPublisher.publishEvent(new LeadChangedEvent(followUp.getLead().getId()));
+
         return toResponse(followUp);
     }
 
     public void deleteFollowUp(Long id) {
 
-        FollowUp followUp = followUpRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "FollowUp not found with id: " + id
-                        )
-                );
-
+        FollowUp followUp = getOwnedFollowUp(id);
+        Long leadId = followUp.getLead().getId();
         followUpRepository.delete(followUp);
+        eventPublisher.publishEvent(new LeadChangedEvent(leadId));
     }
 
     private FollowUpResponse toResponse(FollowUp followUp) {
@@ -133,5 +119,13 @@ public class FollowUpService {
                 followUp.getStatus(),
                 followUp.getLead().getId()
         );
+    }
+
+    private FollowUp getOwnedFollowUp(Long id) {
+        FollowUp followUp = followUpRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("FollowUp not found with id: " + id));
+        leadAccessService.getOwnedLead(followUp.getLead().getId());
+        return followUp;
     }
 }

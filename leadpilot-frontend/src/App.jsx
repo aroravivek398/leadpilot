@@ -7,6 +7,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import Leads from './pages/Leads'
 import LeadDetails from './pages/LeadDetails'
 import Companies from './pages/Companies'
+import AskCrm from './pages/AskCrm'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<LeadDetails />} />
           <Route path="/companies" element={<Companies />} />
+          <Route path="/ask" element={<AskCrm />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

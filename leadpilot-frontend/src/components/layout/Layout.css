@@ -25,7 +25,7 @@
   .shell { grid-template-columns: 1fr; }
   .sidebar { position: fixed; inset: auto 0 0 0; top: auto; height: auto; padding: 8px; z-index: 10; border-right: 0; border-top: 1px solid var(--line); }
   .brand { display: none; }
-  .nav { grid-template-columns: repeat(3, 1fr); }
+  .nav { grid-template-columns: repeat(4, 1fr); }
   .nav a { flex-direction: column; gap: 4px; font-size: 11px; padding: 8px; }
   .topbar { padding: 16px; position: static; flex-wrap: wrap; }
   .content { padding: 4px 16px 96px; }

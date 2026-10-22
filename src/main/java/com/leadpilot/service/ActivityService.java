@@ -12,6 +12,8 @@ import com.leadpilot.repository.LeadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.leadpilot.event.LeadChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 
@@ -22,6 +24,9 @@ public class ActivityService {
 
     private final ActivityRepository activityRepository;
     private final LeadRepository leadRepository;
+    private final LeadAccessService leadAccessService;
+    private final CurrentUserService currentUserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ActivityResponse createActivity(CreateActivityRequest request) {
 
@@ -40,6 +45,8 @@ public class ActivityService {
             leadRepository.save(lead);
         }
 
+        eventPublisher.publishEvent(new LeadChangedEvent(lead.getId()));
+
         return toResponse(savedActivity);
     }
 
@@ -48,8 +55,10 @@ public class ActivityService {
     }
 
     public List<ActivityResponse> getAllActivities() {
+        Long userId = currentUserService.getCurrentUser().getId();
         return activityRepository.findAll()
                 .stream()
+                .filter(a -> a.getLead().getAssignedUser().getId().equals(userId))
                 .map(this::toResponse)
                 .toList();
     }
@@ -83,30 +92,28 @@ public class ActivityService {
             activity.setActivityDate(request.getActivityDate());
         }
 
-        return toResponse(activityRepository.save(activity));
-    }
+        Activity saved = activityRepository.save(activity);
+        eventPublisher.publishEvent(new LeadChangedEvent(saved.getLead().getId()));
+
+        return toResponse(saved);    }
 
     public void deleteActivity(Long id) {
         Activity activity = getActivityById(id);
+        Long leadId = activity.getLead().getId();
         activityRepository.delete(activity);
+        eventPublisher.publishEvent(new LeadChangedEvent(leadId));
     }
 
     private Activity getActivityById(Long id) {
-        return activityRepository.findById(id)
+        Activity activity = activityRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Activity not found with id: " + id
-                        )
-                );
+                        new ResourceNotFoundException("Activity not found with id: " + id));
+        leadAccessService.getOwnedLead(activity.getLead().getId());
+        return activity;
     }
 
     private Lead getLead(Long id) {
-        return leadRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Lead not found with id: " + id
-                        )
-                );
+        return leadAccessService.getOwnedLead(id);
     }
 
     private ActivityResponse toResponse(Activity activity) {

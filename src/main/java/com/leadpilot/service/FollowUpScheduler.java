@@ -1,11 +1,11 @@
 package com.leadpilot.service;
 
-import com.leadpilot.entity.FollowUp;
 import com.leadpilot.entity.FollowUpStatus;
 import com.leadpilot.repository.FollowUpRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -16,19 +16,12 @@ public class FollowUpScheduler {
     private final FollowUpRepository followUpRepository;
 
     @Scheduled(fixedRate = 60000)
+    @Transactional
     public void markOverdueFollowUps() {
-
-        LocalDateTime now = LocalDateTime.now();
-
-        followUpRepository.findAll()
-                .stream()
-                .filter(followUp ->
-                        followUp.getStatus() == FollowUpStatus.PENDING
-                                && followUp.getDueDate().isBefore(now)
-                )
-                .forEach(followUp -> {
-                    followUp.setStatus(FollowUpStatus.OVERDUE);
-                    followUpRepository.save(followUp);
-                });
+        followUpRepository.markOverdue(
+                FollowUpStatus.PENDING,
+                FollowUpStatus.OVERDUE,
+                LocalDateTime.now()
+        );
     }
 }

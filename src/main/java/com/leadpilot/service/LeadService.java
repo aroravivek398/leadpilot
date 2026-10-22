@@ -17,6 +17,8 @@ import com.leadpilot.entity.User;
 import com.leadpilot.repository.UserRepository;
 import com.leadpilot.repository.ActivityRepository;
 import com.leadpilot.repository.FollowUpRepository;
+import com.leadpilot.event.LeadChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 
@@ -31,6 +33,9 @@ public class LeadService {
     private final UserRepository userRepository;
     private final ActivityRepository activityRepository;
     private final FollowUpRepository followUpRepository;
+    private final LeadAccessService leadAccessService;
+    private final CurrentUserService currentUserService;
+    private final ApplicationEventPublisher eventPublisher;
 
 
 
@@ -52,7 +57,10 @@ public class LeadService {
         lead.setContact(contact);
         lead.setAssignedUser(assignedUser);
 
-        return toResponse(leadRepository.save(lead));
+        Lead saved = leadRepository.save(lead);
+        eventPublisher.publishEvent(new LeadChangedEvent(saved.getId()));
+
+        return toResponse(saved);
     }
 
     public LeadResponse getLead(Long id) {
@@ -60,7 +68,9 @@ public class LeadService {
     }
 
     public List<LeadResponse> getAllLeads() {
-        return leadRepository.findAll()
+        Long userId = currentUserService.getCurrentUser().getId();
+
+        return leadRepository.findByAssignedUserId(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -68,8 +78,9 @@ public class LeadService {
 
     public List<LeadResponse> getLeadsByCompany(Long companyId) {
         getCompany(companyId);
+        Long userId = currentUserService.getCurrentUser().getId();
 
-        return leadRepository.findByCompanyId(companyId)
+        return leadRepository.findByCompanyIdAndAssignedUserId(companyId, userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -77,8 +88,9 @@ public class LeadService {
 
     public List<LeadResponse> getLeadsByContact(Long contactId) {
         getContact(contactId);
+        Long userId = currentUserService.getCurrentUser().getId();
 
-        return leadRepository.findByContactId(contactId)
+        return leadRepository.findByContactIdAndAssignedUserId(contactId, userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -128,7 +140,10 @@ public class LeadService {
         lead.setCompany(company);
         lead.setContact(contact);
 
-        return toResponse(leadRepository.save(lead));
+        Lead saved = leadRepository.save(lead);
+        eventPublisher.publishEvent(new LeadChangedEvent(saved.getId()));
+
+        return toResponse(saved);
     }
 
     public void deleteLead(Long id) {
@@ -138,13 +153,11 @@ public class LeadService {
         followUpRepository.deleteByLeadId(id);
 
         leadRepository.delete(lead);
+        eventPublisher.publishEvent(new LeadChangedEvent(id));
     }
 
     private Lead getLeadById(Long id) {
-        return leadRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Lead not found with id: " + id)
-                );
+        return leadAccessService.getOwnedLead(id);
     }
 
     private Company getCompany(Long id) {

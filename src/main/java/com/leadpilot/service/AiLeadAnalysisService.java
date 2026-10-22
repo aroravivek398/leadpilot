@@ -23,16 +23,13 @@ public class AiLeadAnalysisService {
     private final LeadRepository leadRepository;
     private final ActivityRepository activityRepository;
     private final FollowUpRepository followUpRepository;
+    private final LeadAccessService leadAccessService;
+    private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
     public AiLeadAnalysisResponse analyzeLead(Long leadId) {
 
-        Lead lead = leadRepository.findById(leadId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Lead not found with id: " + leadId
-                        )
-                );
+        Lead lead = leadAccessService.getOwnedLead(leadId);
 
         List<Activity> activities =
                 activityRepository.findByLeadIdOrderByActivityDateDesc(leadId);

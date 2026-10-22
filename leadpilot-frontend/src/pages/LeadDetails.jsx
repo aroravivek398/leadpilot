@@ -9,6 +9,7 @@ import {
   deleteLead,
 } from '../services/leadService'
 import { getUsers } from '../services/userService'
+import { analyzeLead } from '../services/aiService'
 import {
   getActivitiesByLead,
   createActivity,
@@ -68,6 +69,24 @@ const [editForm, setEditForm] = useState({
   const [followUpError, setFollowUpError] = useState('')
   const [followUpLoading, setFollowUpLoading] = useState(false)
 
+  const [aiResult, setAiResult] = useState(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+
+  const handleAnalyze = async () => {
+    setAiError('')
+    setAiLoading(true)
+
+    try {
+      const result = await analyzeLead(id)
+      setAiResult(result)
+    } catch (error) {
+      setAiError(error.message)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   const handleStageChange = async (event) => {
   const newStage = event.target.value
   setActionError('')
@@ -94,7 +113,7 @@ const handleAssignedUserChange = async (event) => {
   setActionError('')
 
   try {
-    const updatedLead = await updateLead(id, {
+    await updateLead(id, {
       name: lead.name,
       source: lead.source,
       stage: lead.stage,
@@ -105,7 +124,8 @@ const handleAssignedUserChange = async (event) => {
       assignedUserId: newUserId,
     })
 
-    setLead(updatedLead)
+    // The lead now belongs to someone else, so it is no longer visible to me.
+    navigate('/leads')
   } catch (error) {
     setActionError(error.message)
   }
@@ -446,6 +466,53 @@ const handleCompleteFollowUp = async (followUpId) => {
         </section>
 
         <div className="stack">
+          <section className="card">
+            <h2 className="card-title">
+              AI Insights
+              <button
+                className="btn btn-sm"
+                onClick={handleAnalyze}
+                disabled={aiLoading}
+              >
+                {aiLoading ? 'Analyzing...' : aiResult ? 'Re-analyze' : 'Analyze with AI'}
+              </button>
+            </h2>
+
+            {aiError && (
+              <p className="alert-error" role="alert">
+                {aiError}
+              </p>
+            )}
+
+            {!aiResult && !aiLoading && !aiError && (
+              <p className="meta">
+                Get a summary, likely concerns, the next best action and a
+                draft follow-up message for this lead.
+              </p>
+            )}
+
+            {aiResult && (
+              <div className="info-list">
+                <div className="info-item">
+                  <span>Summary</span>
+                  <p>{aiResult.summary}</p>
+                </div>
+                <div className="info-item">
+                  <span>Interests &amp; concerns</span>
+                  <p>{aiResult.interestsAndConcerns}</p>
+                </div>
+                <div className="info-item">
+                  <span>Next best action</span>
+                  <p>{aiResult.nextBestAction}</p>
+                </div>
+                <div className="info-item">
+                  <span>Follow-up draft</span>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{aiResult.followUpDraft}</p>
+                </div>
+              </div>
+            )}
+          </section>
+
           <section className="card">
             <h2 className="card-title">Activities</h2>
 

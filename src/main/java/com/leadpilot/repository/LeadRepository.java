@@ -25,4 +25,11 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
             GROUP BY l.stage
             """)
     List<Object[]> sumLeadValueByStage();
+
+
+    List<Lead> findByAssignedUserId(Long userId);
+
+    List<Lead> findByCompanyIdAndAssignedUserId(Long companyId, Long userId);
+
+    List<Lead> findByContactIdAndAssignedUserId(Long contactId, Long userId);
 }
